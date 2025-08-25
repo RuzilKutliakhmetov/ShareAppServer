@@ -1,0 +1,179 @@
+// Настройка подключения к базе данных
+datasource db {
+  // Используем PostgreSQL в качестве СУБД
+  provider = "postgresql"
+  // URL подключения берется из переменной окружения
+  url      = env("DATABASE_URL")
+}
+
+// Настройка генератора клиента
+generator client {
+  // Генерируем клиент для JavaScript/TypeScript
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+// Модель пользователя системы
+model User {
+  id              Int       @id @default(autoincrement()) // Уникальный ID (автоинкремент)
+  email           String    @unique // Уникальный email
+  password        String // Хэшированный пароль
+  name            String // Полное имя пользователя
+  phone           String? // Необязательный телефон
+  avatar          String? // Необязательная ссылка на аватар
+  createdAt       DateTime  @default(now()) // Дата создания записи
+  updatedAt       DateTime  @updatedAt // Дата последнего обновления
+  role            Role      @default(USER) // Роль (по умолчанию USER)
+  products        Product[] // Товары пользователя
+  rentalsAsOwner  Rental[]  @relation("OwnerRentals") // Аренды как владельца
+  rentalsAsRenter Rental[]  @relation("RenterRentals") // Аренды как арендатора
+  reviewsWritten  Review[]  @relation("ReviewerReviews") // Отзывы, написанные пользователем
+  reviewsReceived Review[]  @relation("RevieweeReviews") // Отзывы, полученные пользователем
+  payments        Payment[] // Платежи пользователя
+  verified        Boolean   @default(false) // Флаг верификации аккаунта
+
+  @@map("user")
+}
+
+// Роли пользователей
+enum Role {
+  USER // Обычный пользователь
+  ADMIN // Администратор системы
+}
+
+// Модель товара/продукта
+model Product {
+  id          Int           @id @default(autoincrement()) // Уникальный ID
+  title       String // Название товара
+  description String // Описание товара
+  price       Float // Цена аренды
+  deposit     Float // Залоговая сумма
+  category    Category      @relation(fields: [categoryId], references: [id]) // Категория товара
+  categoryId  Int // ID категории
+  owner       User          @relation(fields: [ownerId], references: [id]) // Владелец товара
+  ownerId     Int // ID владельца
+  images      String[] // Массив ссылок на изображения
+  condition   Condition     @default(GOOD) // Состояние товара
+  status      ProductStatus @default(AVAILABLE) // Статус доступности
+  location    String // Местоположение товара
+  createdAt   DateTime      @default(now()) // Дата создания
+  updatedAt   DateTime      @updatedAt // Дата обновления
+  rentals     Rental[] // Аренды этого товара
+  reviews     Review[] // Отзывы на товар
+  features    Json? // Доп. характеристики в JSON
+
+  @@map("product")
+}
+
+// Состояние товара
+enum Condition {
+  NEW // Новый
+  GOOD // Хорошее
+  FAIR // Удовлетворительное
+  POOR // Плохое
+}
+
+// Статус товара
+enum ProductStatus {
+  AVAILABLE // Доступен для аренды
+  RENTED // В аренде
+  MAINTENANCE // На обслуживании
+  UNAVAILABLE // Недоступен
+}
+
+// Модель категории товаров
+model Category {
+  id        Int        @id @default(autoincrement()) // Уникальный ID
+  name      String     @unique // Название категории
+  slug      String     @unique // Уникальный URL-идентификатор
+  parentId  Int? // ID родительской категории (для иерархии)
+  parent    Category?  @relation("CategoryToCategory", fields: [parentId], references: [id]) // Родительская категория
+  children  Category[] @relation("CategoryToCategory") // Дочерние категории
+  products  Product[] // Товары в этой категории
+  createdAt DateTime   @default(now()) // Дата создания
+  updatedAt DateTime   @updatedAt // Дата обновления
+
+  @@map("category")
+}
+
+// Модель аренды
+model Rental {
+  id         Int          @id @default(autoincrement()) // Уникальный ID
+  product    Product      @relation(fields: [productId], references: [id]) // Арендуемый товар
+  productId  Int // ID товара
+  owner      User         @relation("OwnerRentals", fields: [ownerId], references: [id]) // Владелец
+  ownerId    Int // ID владельца
+  renter     User         @relation("RenterRentals", fields: [renterId], references: [id]) // Арендатор
+  renterId   Int // ID арендатора
+  startDate  DateTime // Дата начала аренды
+  endDate    DateTime // Дата окончания аренды
+  totalPrice Float // Общая стоимость аренды
+  status     RentalStatus @default(PENDING) // Статус аренды
+  createdAt  DateTime     @default(now()) // Дата создания
+  updatedAt  DateTime     @updatedAt // Дата обновления
+  payment    Payment? // Платеж по аренде
+  review     Review? // Отзыв по аренде
+
+  @@map("rental")
+}
+
+// Статусы аренды
+enum RentalStatus {
+  PENDING // Ожидает подтверждения
+  CONFIRMED // Подтверждена
+  ACTIVE // Активна
+  COMPLETED // Завершена
+  CANCELLED // Отменена
+  REJECTED // Отклонена
+}
+
+// Модель отзыва
+model Review {
+  id         Int      @id @default(autoincrement()) // Уникальный ID
+  rating     Int // Оценка (рейтинг)
+  comment    String? // Текст отзыва (необязательный)
+  rental     Rental   @relation(fields: [rentalId], references: [id]) // Связанная аренда
+  rentalId   Int      @unique // ID аренды (уникальный)
+  product    Product  @relation(fields: [productId], references: [id]) // Товар
+  productId  Int // ID товара
+  reviewer   User     @relation("ReviewerReviews", fields: [reviewerId], references: [id]) // Автор отзыва
+  reviewerId Int // ID автора
+  reviewee   User     @relation("RevieweeReviews", fields: [revieweeId], references: [id]) // Получатель отзыва
+  revieweeId Int // ID получателя
+  createdAt  DateTime @default(now()) // Дата создания
+
+  @@map("review")
+}
+
+// Модель платежа
+model Payment {
+  id            Int           @id @default(autoincrement()) // Уникальный ID
+  amount        Float // Сумма платежа
+  rental        Rental        @relation(fields: [rentalId], references: [id]) // Связанная аренда
+  rentalId      Int           @unique // ID аренды (уникальный)
+  user          User          @relation(fields: [userId], references: [id]) // Пользователь
+  userId        Int // ID пользователя
+  method        PaymentMethod // Способ оплаты
+  status        PaymentStatus @default(PENDING) // Статус платежа
+  transactionId String? // ID транзакции (необязательный)
+  createdAt     DateTime      @default(now()) // Дата создания
+  updatedAt     DateTime      @updatedAt // Дата обновления
+
+  @@map("payment")
+}
+
+// Способы оплаты
+enum PaymentMethod {
+  CARD // Банковская карта
+  PAYPAL // PayPal
+  BANK_TRANSFER // Банковский перевод
+  OTHER // Другой способ
+}
+
+// Статусы платежа
+enum PaymentStatus {
+  PENDING // Ожидает обработки
+  COMPLETED // Успешно завершен
+  FAILED // Неудачный платеж
+  REFUNDED // Возврат средств
+}
