@@ -82,6 +82,126 @@ export class PaymentsService {
 		return payment
 	}
 
+	async findAll() {
+		return this.prisma.payment.findMany({
+			include: {
+				rental: {
+					include: {
+						product: {
+							include: {
+								category: true,
+								owner: true
+							}
+						},
+						owner: true,
+						renter: true
+					}
+				},
+				user: true
+			}
+		})
+	}
+
+	async findByUser(userId: number) {
+		const user = await this.prisma.user.findUnique({
+			where: { id: userId }
+		})
+
+		if (!user) {
+			throw new NotFoundException(`User with ID ${userId} not found`)
+		}
+
+		return this.prisma.payment.findMany({
+			where: { userId },
+			include: {
+				rental: {
+					include: {
+						product: {
+							include: {
+								category: true,
+								owner: true
+							}
+						},
+						owner: true,
+						renter: true
+					}
+				},
+				user: true
+			}
+		})
+	}
+
+	async findByRental(rentalId: number) {
+		const rental = await this.prisma.rental.findUnique({
+			where: { id: rentalId }
+		})
+
+		if (!rental) {
+			throw new NotFoundException(`Rental with ID ${rentalId} not found`)
+		}
+
+		return this.prisma.payment.findMany({
+			where: { rentalId },
+			include: {
+				rental: {
+					include: {
+						product: {
+							include: {
+								category: true,
+								owner: true
+							}
+						},
+						owner: true,
+						renter: true
+					}
+				},
+				user: true
+			}
+		})
+	}
+
+	async findByStatus(status: string) {
+		return this.prisma.payment.findMany({
+			where: { status: status as any },
+			include: {
+				rental: {
+					include: {
+						product: {
+							include: {
+								category: true,
+								owner: true
+							}
+						},
+						owner: true,
+						renter: true
+					}
+				},
+				user: true
+			}
+		})
+	}
+
+	async findByMethod(method: string) {
+		return this.prisma.payment.findMany({
+			where: { method: method as any },
+			include: {
+				rental: {
+					include: {
+						product: {
+							include: {
+								category: true,
+								owner: true
+							}
+						},
+						owner: true,
+						renter: true
+					}
+				},
+				user: true
+			}
+		})
+	}
+
 	async update(id: number, updatePaymentDto: UpdatePaymentDto) {
 		// Проверяем существование связанных сущностей, если они обновляются
 		if (updatePaymentDto.rentalId) {

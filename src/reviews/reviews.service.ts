@@ -77,6 +77,23 @@ export class ReviewsService {
 		})
 	}
 
+	async findAll() {
+		return this.prisma.review.findMany({
+			include: {
+				rental: {
+					include: {
+						product: true,
+						owner: true,
+						renter: true
+					}
+				},
+				product: true,
+				reviewer: true,
+				reviewee: true
+			}
+		})
+	}
+
 	async findOne(id: number) {
 		const review = await this.prisma.review.findUnique({
 			where: { id },
@@ -166,5 +183,87 @@ export class ReviewsService {
 			}
 			throw error
 		}
+	}
+
+	async findByProduct(productId: number) {
+		const product = await this.prisma.product.findUnique({
+			where: { id: productId }
+		})
+
+		if (!product) {
+			throw new NotFoundException(`Product with ID ${productId} not found`)
+		}
+
+		return this.prisma.review.findMany({
+			where: { productId },
+			include: {
+				rental: {
+					include: {
+						product: true,
+						owner: true,
+						renter: true
+					}
+				},
+				product: true,
+				reviewer: true,
+				reviewee: true
+			}
+		})
+	}
+
+	async findByUser(userId: number) {
+		const user = await this.prisma.user.findUnique({
+			where: { id: userId }
+		})
+
+		if (!user) {
+			throw new NotFoundException(`User with ID ${userId} not found`)
+		}
+
+		return this.prisma.review.findMany({
+			where: {
+				OR: [{ reviewerId: userId }, { revieweeId: userId }]
+			},
+			include: {
+				rental: {
+					include: {
+						product: true,
+						owner: true,
+						renter: true
+					}
+				},
+				product: true,
+				reviewer: true,
+				reviewee: true
+			}
+		})
+	}
+
+	async findByRating(minRating: number, maxRating?: number) {
+		const whereCondition: any = {
+			rating: {
+				gte: minRating
+			}
+		}
+
+		if (maxRating !== undefined) {
+			whereCondition.rating.lte = maxRating
+		}
+
+		return this.prisma.review.findMany({
+			where: whereCondition,
+			include: {
+				rental: {
+					include: {
+						product: true,
+						owner: true,
+						renter: true
+					}
+				},
+				product: true,
+				reviewer: true,
+				reviewee: true
+			}
+		})
 	}
 }

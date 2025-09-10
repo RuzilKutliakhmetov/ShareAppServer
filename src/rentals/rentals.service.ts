@@ -117,6 +117,102 @@ export class RentalsService {
 		return rental
 	}
 
+	async findByOwner(ownerId: number) {
+		const owner = await this.prisma.user.findUnique({
+			where: { id: ownerId }
+		})
+
+		if (!owner) {
+			throw new NotFoundException(`Owner with ID ${ownerId} not found`)
+		}
+
+		return this.prisma.rental.findMany({
+			where: { ownerId },
+			include: {
+				product: {
+					include: {
+						category: true,
+						owner: true
+					}
+				},
+				owner: true,
+				renter: true,
+				payment: true,
+				review: true
+			}
+		})
+	}
+
+	async findByRenter(renterId: number) {
+		const renter = await this.prisma.user.findUnique({
+			where: { id: renterId }
+		})
+
+		if (!renter) {
+			throw new NotFoundException(`Renter with ID ${renterId} not found`)
+		}
+
+		return this.prisma.rental.findMany({
+			where: { renterId },
+			include: {
+				product: {
+					include: {
+						category: true,
+						owner: true
+					}
+				},
+				owner: true,
+				renter: true,
+				payment: true,
+				review: true
+			}
+		})
+	}
+
+	async findByProduct(productId: number) {
+		const product = await this.prisma.product.findUnique({
+			where: { id: productId }
+		})
+
+		if (!product) {
+			throw new NotFoundException(`Product with ID ${productId} not found`)
+		}
+
+		return this.prisma.rental.findMany({
+			where: { productId },
+			include: {
+				product: {
+					include: {
+						category: true,
+						owner: true
+					}
+				},
+				owner: true,
+				renter: true,
+				payment: true,
+				review: true
+			}
+		})
+	}
+
+	async findByStatus(status: string) {
+		return this.prisma.rental.findMany({
+			where: { status: status as any },
+			include: {
+				product: {
+					include: {
+						category: true,
+						owner: true
+					}
+				},
+				owner: true,
+				renter: true,
+				payment: true,
+				review: true
+			}
+		})
+	}
+
 	async update(id: number, updateRentalDto: UpdateRentalDto) {
 		// Проверяем существование связанных сущностей, если они обновляются
 		if (updateRentalDto.productId) {

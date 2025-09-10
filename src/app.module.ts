@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { AppController } from './app.controller'
-import { AppService } from './app.service'
 import { AuthModule } from './auth/auth.module'
 import { CategoriesModule } from './categories/categories.module'
 import { PaymentsModule } from './payments/payments.module'
@@ -21,7 +19,7 @@ import { UsersModule } from './users/users.module'
 		ReviewsModule,
 		PaymentsModule
 	],
-	controllers: [AppController],
-	providers: [AppService]
+	controllers: [],
+	providers: []
 })
 export class AppModule {}
